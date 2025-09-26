@@ -1,9 +1,19 @@
 'use client';
 
 import { motion, useScroll, useTransform, useSpring } from 'framer-motion';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowDown, ArrowUpRight } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+// Dynamic import for 3D component to avoid SSR issues
+const Hero3D = dynamic(() => import('@/components/hero/Hero3D'), {
+  ssr: false,
+  loading: () => (
+    <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-slate-800" />
+  ),
+});
 
 export default function Home() {
   const [time, setTime] = useState<Date | null>(null);
@@ -48,84 +58,38 @@ export default function Home() {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="relative h-screen flex items-center justify-center overflow-hidden">
-        {/* Background gradient animation */}
-        <motion.div
-          className="absolute inset-0 opacity-5"
-          animate={{
-            background: [
-              'radial-gradient(circle at 20% 80%, #000 0%, transparent 50%)',
-              'radial-gradient(circle at 80% 20%, #000 0%, transparent 50%)',
-              'radial-gradient(circle at 20% 80%, #000 0%, transparent 50%)',
-            ],
-          }}
-          transition={{
-            duration: 10,
-            ease: "easeInOut",
-            repeat: Infinity,
-          }}
-        />
+      <section className="relative h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-slate-900 to-slate-800">
+        {/* 3D Background */}
+        <Hero3D />
 
-        <div className="relative z-10 text-center px-6">
-          {/* Main Title with stagger animation */}
-          <motion.div
+        {/* Glass overlay */}
+        <div className="absolute inset-0 bg-slate-900/20 backdrop-blur-[1px] z-10" />
+
+        <div className="relative z-20 text-center px-6">
+          {/* Main Title */}
+          <motion.h1
             className="mb-8"
-            initial="hidden"
-            animate="visible"
-            variants={{
-              hidden: { opacity: 0 },
-              visible: {
-                opacity: 1,
-                transition: {
-                  staggerChildren: 0.1,
-                },
-              },
-            }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
           >
-            {['D', 'A', 'E', 'H', 'Y', 'E', 'O', 'N', ' ', 'K', 'I', 'M'].map((letter, index) => (
-              <motion.span
-                key={index}
-                className="inline-block text-6xl md:text-8xl lg:text-9xl font-thin tracking-widest"
-                variants={{
-                  hidden: { opacity: 0, y: 50, rotateX: -90 },
-                  visible: {
-                    opacity: 1,
-                    y: 0,
-                    rotateX: 0,
-                    transition: {
-                      duration: 0.8,
-                      ease: [0.6, 0.01, 0.05, 0.95],
-                    },
-                  },
-                }}
-                whileHover={{
-                  scale: 1.2,
-                  color: '#666',
-                  transition: { duration: 0.2 },
-                }}
-                style={{ transformStyle: 'preserve-3d' }}
-              >
-                {letter}
-              </motion.span>
-            ))}
-          </motion.div>
+            <span className="block text-6xl md:text-8xl lg:text-9xl font-thin tracking-[0.3em] text-white">
+              DAEHYEON
+            </span>
+          </motion.h1>
 
           {/* Subtitle */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1, duration: 0.8 }}
-            style={{ y: y1Spring }}
+            transition={{ delay: 0.3, duration: 0.8 }}
             className="space-y-2"
           >
-            <p className="text-gray-500 tracking-[0.2em] text-sm">
-              Department of Industrial & Management Systems Engineering
-            </p>
-            <p className="text-gray-400 text-xs mt-1">
-              Kyung Hee University
+            <p className="text-gray-300 tracking-[0.2em] text-sm uppercase">
+              Product Management
             </p>
             {mounted && time && (
-              <p className="text-gray-300 text-xs font-mono mt-4">
+              <p className="text-gray-400 text-xs font-mono mt-4">
                 {formatTime(time)} KST
               </p>
             )}
@@ -137,7 +101,6 @@ export default function Home() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 1.5 }}
-            style={{ opacity }}
           >
             <motion.div
               animate={{ y: [0, 10, 0] }}
@@ -147,78 +110,138 @@ export default function Home() {
                 ease: "easeInOut",
               }}
             >
-              <ArrowDown className="w-5 h-5 text-gray-400" />
+              <ArrowDown className="w-5 h-5 text-gray-300" />
             </motion.div>
           </motion.div>
         </div>
       </section>
 
       {/* About Section */}
-      <section className="min-h-screen flex items-center px-6 lg:px-12">
-        <div className="max-w-5xl mx-auto grid lg:grid-cols-2 gap-12 lg:gap-24">
-          {/* Left Column */}
+      <section className="py-24 px-6 lg:px-12">
+        <div className="max-w-6xl mx-auto">
           <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            whileInView={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
             viewport={{ once: true }}
-            style={{ y: y2Spring }}
+            className="mb-16"
           >
-            <h2 className="text-4xl lg:text-5xl font-thin mb-8">
+            <h2 className="text-5xl lg:text-6xl font-thin">
               About
             </h2>
-            <p className="text-gray-600 leading-relaxed mb-6">
-              Currently pursuing undergraduate studies at the Department of Industrial & Management Systems Engineering, Kyung Hee University.
-              Aiming to become a generalist capable of leading projects, I am broadly studying various fields including
-              planning, UX, UI, HCI, development, optimization, artificial intelligence, machine learning,
-              data analysis, technology management, and marketing to become a Full-Stack PM.
-            </p>
-            <div className="mt-8 space-y-3 text-sm">
-              <div className="flex">
-                <span className="text-gray-400 w-24">Born</span>
-                <span className="text-gray-600">April 11, 2002</span>
-              </div>
-              <div className="flex">
-                <span className="text-gray-400 w-24">University</span>
-                <span className="text-gray-600">Kyung Hee University, South Korea</span>
-              </div>
-              <div className="flex">
-                <span className="text-gray-400 w-24">Major</span>
-                <span className="text-gray-600">Department of Industrial & Management Systems Engineering</span>
-              </div>
-              <div className="flex">
-                <span className="text-gray-400 w-24">Lab</span>
-                <span className="text-gray-600">UXC Lab, Department of Software Convergence</span>
-              </div>
-              <div className="flex">
-                <span className="text-gray-400 w-24">Email</span>
-                <a href="mailto:ahfxh@khu.ac.kr" className="text-gray-600 hover:text-black transition-colors">
-                  ahfxh@khu.ac.kr
-                </a>
+          </motion.div>
+
+          {/* Profile & Info Row */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.1 }}
+            viewport={{ once: true }}
+            className="flex flex-col md:flex-row gap-8 md:gap-16 mb-20 pl-0 md:pl-12"
+          >
+            {/* Profile Image - with subtle effects */}
+            <motion.div 
+              className="flex-shrink-0 relative group"
+              whileHover={{ scale: 1.02 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-gray-200 to-gray-300 rounded-xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity"></div>
+              <Image
+                src="/profile.jpeg"
+                alt="Daehyeon Kim"
+                width={200}
+                height={200}
+                className="rounded-xl relative z-10"
+                priority
+              />
+            </motion.div>
+            
+            {/* Info List - Vertical with highlights */}
+            <div className="flex-grow">
+              <div className="space-y-4">
+                <div className="flex group">
+                  <span className="text-gray-400 text-sm w-24 transition-colors group-hover:text-gray-600">Name</span>
+                  <span className="text-gray-700 text-sm">Daehyeon Kim</span>
+                </div>
+                <div className="flex group">
+                  <span className="text-gray-400 text-sm w-24 transition-colors group-hover:text-gray-600">University</span>
+                  <span className="text-gray-700 text-sm">Kyung Hee University</span>
+                </div>
+                <div className="flex group">
+                  <span className="text-gray-400 text-sm w-24 transition-colors group-hover:text-gray-600">Major</span>
+                  <span className="text-gray-700 text-sm">Industrial & Management Systems Engineering</span>
+                </div>
+                <div className="flex group">
+                  <span className="text-gray-400 text-sm w-24 transition-colors group-hover:text-gray-600">Lab</span>
+                  <span className="text-gray-700 text-sm">UXC Lab, Software Convergence</span>
+                </div>
+                <div className="flex group">
+                  <span className="text-gray-400 text-sm w-24 transition-colors group-hover:text-gray-600">Born</span>
+                  <span className="text-gray-700 text-sm">April 11, 2002</span>
+                </div>
+                <div className="flex group">
+                  <span className="text-gray-400 text-sm w-24 transition-colors group-hover:text-gray-600">Location</span>
+                  <span className="text-gray-700 text-sm">Yongin, South Korea</span>
+                </div>
+                <div className="flex group">
+                  <span className="text-gray-400 text-sm w-24 transition-colors group-hover:text-gray-600">Email</span>
+                  <a href="mailto:ahfxh@khu.ac.kr" className="text-gray-700 text-sm hover:text-black transition-all relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1px] after:bg-black hover:after:w-full after:transition-all">
+                    ahfxh@khu.ac.kr
+                  </a>
+                </div>
               </div>
             </div>
           </motion.div>
 
-          {/* Right Column - Skills */}
+          {/* Introduction Section */}
           <motion.div
-            initial={{ opacity: 0, x: 50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8 }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
             viewport={{ once: true }}
+            className="mb-24 pl-0 md:pl-12"
           >
-            <h3 className="text-sm uppercase tracking-widest text-gray-400 mb-6">
+            <h3 className="text-xs uppercase tracking-[0.4em] text-gray-400 mb-6 font-medium flex items-center gap-3">
+              <span className="block w-8 h-[1px] bg-gradient-to-r from-gray-300 to-transparent"></span>
+              Introduction
+            </h3>
+            <p className="text-gray-600 leading-relaxed text-base max-w-4xl">
+              Currently pursuing undergraduate studies at the Department of Industrial & Management Systems Engineering, Kyung Hee University.
+              Aiming to become a <span className="text-gray-900 font-medium">generalist capable of leading projects</span>, I am broadly studying various fields including
+              planning, UX, UI, HCI, development, optimization, artificial intelligence, machine learning,
+              data analysis, technology management, and marketing to become a <span className="text-gray-900 font-medium">Full-Stack PM</span>.
+            </p>
+          </motion.div>
+
+          {/* Skills Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+            viewport={{ once: true }}
+            className="pl-0 md:pl-12"
+          >
+            <h3 className="text-xs uppercase tracking-[0.4em] text-gray-400 mb-8 font-medium flex items-center gap-3">
+              <span className="block w-8 h-[1px] bg-gradient-to-r from-gray-300 to-transparent"></span>
               Skills & Learning
             </h3>
-            <div className="space-y-6">
+            
+            <div className="grid md:grid-cols-3 gap-8">
               {Object.entries(skills).map(([category, items], categoryIndex) => (
                 <motion.div
                   key={category}
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ delay: categoryIndex * 0.2 }}
+                  transition={{ delay: categoryIndex * 0.1 + 0.4 }}
                   viewport={{ once: true }}
+                  className="space-y-4"
                 >
-                  <h4 className="text-xs font-medium text-gray-500 mb-3 uppercase tracking-wider">
+                  <h4 className="text-sm font-medium text-gray-700 uppercase tracking-wider flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${
+                      category === 'Data' ? 'bg-blue-400' :
+                      category === 'Development' ? 'bg-green-400' :
+                      'bg-purple-400'
+                    }`}></span>
                     {category}
                   </h4>
                   <div className="flex flex-wrap gap-2">
@@ -227,10 +250,14 @@ export default function Home() {
                         key={skill}
                         initial={{ opacity: 0, scale: 0.9 }}
                         whileInView={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: categoryIndex * 0.2 + index * 0.05 }}
+                        transition={{ delay: categoryIndex * 0.1 + index * 0.03 + 0.5 }}
                         viewport={{ once: true }}
-                        whileHover={{ scale: 1.05 }}
-                        className="px-3 py-1.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-md text-sm text-gray-700 transition-all"
+                        whileHover={{ scale: 1.05, y: -2 }}
+                        className={`px-4 py-2 bg-white border rounded-lg text-sm text-gray-700 transition-all ${
+                          category === 'Data' ? 'border-gray-200 hover:border-blue-200 hover:shadow-blue-50 hover:shadow-md' :
+                          category === 'Development' ? 'border-gray-200 hover:border-green-200 hover:shadow-green-50 hover:shadow-md' :
+                          'border-gray-200 hover:border-purple-200 hover:shadow-purple-50 hover:shadow-md'
+                        }`}
                       >
                         {skill}
                       </motion.span>
