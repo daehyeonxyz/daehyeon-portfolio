@@ -54,13 +54,11 @@ export default function Navigation() {
       />
       
       {/* Navigation */}
-      <motion.nav
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+      <nav
+        className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 ${
           isScrolled 
-            ? 'backdrop-blur-md bg-white/80 border-b border-gray-100' 
-            : 'bg-transparent'
+            ? 'backdrop-blur-md bg-white/90 border-b border-gray-200 shadow-sm' 
+            : 'bg-white border-b border-gray-100'
         }`}
       >
         <div className="max-w-7xl mx-auto px-6 lg:px-12">
@@ -166,7 +164,7 @@ export default function Navigation() {
                   </motion.button>
                 ) : (
                   <motion.button
-                    onClick={() => signIn('github')}
+                    onClick={() => signIn('github', { callbackUrl: '/portfolio' })}
                     className="flex items-center gap-2 text-sm bg-black text-white px-4 py-2 rounded-full hover:bg-gray-800 transition-colors"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
@@ -179,7 +177,7 @@ export default function Navigation() {
             </div>
           </div>
         </div>
-      </motion.nav>
+      </nav>
     </>
   );
 }

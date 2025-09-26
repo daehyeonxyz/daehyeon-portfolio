@@ -485,10 +485,12 @@ export default function PortfolioPage() {
                         li: ({node, ...props}) => <li className="mb-1" {...props} />,
                         a: ({node, ...props}) => <a className="text-blue-600 hover:text-blue-800 underline" {...props} />,
                         blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-gray-300 pl-4 italic my-4 text-gray-600" {...props} />,
-                        code: ({node, inline, ...props}) => 
-                          inline 
+                        code: ({node, ...props}) => {
+                          const isInline = !props.children?.toString().includes('\n');
+                          return isInline
                             ? <code className="bg-gray-100 rounded px-1 py-0.5 font-mono text-sm" {...props} />
-                            : <code className="block bg-gray-100 rounded p-4 mb-4 font-mono text-sm overflow-x-auto" {...props} />,
+                            : <code className="block bg-gray-100 rounded p-4 mb-4 font-mono text-sm overflow-x-auto" {...props} />;
+                        },
                         pre: ({node, ...props}) => <pre className="bg-gray-900 text-gray-100 rounded-lg p-4 mb-4 overflow-x-auto" {...props} />,
                       }}
                     >

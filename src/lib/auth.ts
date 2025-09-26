@@ -4,7 +4,8 @@ import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from '@/lib/prisma';
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma) as any,
+  // Remove adapter to use JWT only (no database sessions)
+  // adapter: PrismaAdapter(prisma) as any,
   providers: [
     GithubProvider({
       clientId: process.env.GITHUB_ID!,
@@ -18,53 +19,38 @@ export const authOptions: NextAuthOptions = {
         const githubUsername = (profile as any)?.login;
         const allowedUsername = process.env.ADMIN_GITHUB_USERNAME || 'daehyeonxyz';
         
-        // Allow only specific user
-        if (githubUsername === allowedUsername) {
-          // Set admin flag when signing in
-          try {
-            await prisma.user.update({
-              where: { email: user.email! },
-              data: { isAdmin: true }
-            });
-          } catch (error) {
-            // User might not exist yet, that's ok
-            console.log('User will be created with admin rights');
-          }
-          return true;
-        }
+        console.log('GitHub login attempt:', {
+          username: githubUsername,
+          allowed: allowedUsername,
+          match: githubUsername === allowedUsername
+        });
         
-        // Block other users
-        return false;
+        // Allow only specific user
+        return githubUsername === allowedUsername;
       }
       return false;
     },
     async jwt({ token, user, account, profile }) {
       // First time JWT creation
-      if (account && user) {
-        // Find or create user in database
-        const dbUser = await prisma.user.findUnique({
-          where: { email: user.email! }
-        });
-        
-        if (dbUser) {
-          token.id = dbUser.id;
-          token.email = dbUser.email;
-          token.isAdmin = dbUser.isAdmin;
-        } else {
-          // If user doesn't exist, use the user object id
-          token.id = user.id;
-          token.email = user.email;
-          token.isAdmin = true;
-        }
+      if (account && profile && account.provider === 'github') {
+        token.id = (profile as any).id;
+        token.email = user?.email;
+        token.name = user?.name;
+        token.image = user?.image;
+        token.username = (profile as any).login;
+        token.isAdmin = (profile as any).login === process.env.ADMIN_GITHUB_USERNAME;
       }
       return token;
     },
     async session({ session, token }: any) {
       // Pass token info to session
       if (session?.user) {
-        session.user.id = token.id || token.sub; // Use token.sub as fallback
+        session.user.id = token.id || token.sub;
         session.user.email = token.email;
-        session.user.isAdmin = token.isAdmin !== false; // Default to true for logged in users
+        session.user.name = token.name;
+        session.user.image = token.image;
+        session.user.username = token.username;
+        session.user.isAdmin = token.isAdmin === true;
       }
       return session;
     },

@@ -39,11 +39,11 @@ export default function Home() {
     });
   };
 
-  const skills = [
-    "Python", "Machine Learning", "Optimization", "Data Analysis",
-    "React", "Next.js", "PHP", "MySQL",
-    "Figma", "UX Research", "Project Management", "Branding"
-  ];
+  const skills = {
+    "Data": ["Python", "R", "Pandas", "PyTorch", "Scikit-learn"],
+    "Development": ["JavaScript", "TypeScript", "C++", "React", "MongoDB", "Node.js", "NestJS"],
+    "Design": ["Figma", "Adobe Illustrator"]
+  };
 
   return (
     <div className="min-h-screen">
@@ -82,7 +82,7 @@ export default function Home() {
               },
             }}
           >
-            {['D', 'A', 'E', 'H', 'Y', 'E', 'O', 'N'].map((letter, index) => (
+            {['D', 'A', 'E', 'H', 'Y', 'E', 'O', 'N', ' ', 'K', 'I', 'M'].map((letter, index) => (
               <motion.span
                 key={index}
                 className="inline-block text-6xl md:text-8xl lg:text-9xl font-thin tracking-widest"
@@ -118,11 +118,11 @@ export default function Home() {
             style={{ y: y1Spring }}
             className="space-y-2"
           >
-            <p className="text-gray-500 tracking-[0.3em] text-sm uppercase">
-              Full-Stack PM & Consultant
+            <p className="text-gray-500 tracking-[0.2em] text-sm">
+              Department of Industrial & Management Systems Engineering
             </p>
-            <p className="text-gray-400 text-xs">
-              Industrial & Management Systems Engineering
+            <p className="text-gray-400 text-xs mt-1">
+              Kyung Hee University
             </p>
             {mounted && time && (
               <p className="text-gray-300 text-xs font-mono mt-4">
@@ -168,18 +168,35 @@ export default function Home() {
               About
             </h2>
             <p className="text-gray-600 leading-relaxed mb-6">
-              작은 기업들의 조력자가 되고자 하는 비전을 가진 학생입니다.
-              원석 같은 기업과 프로젝트를 찾아 브랜딩과 컨설팅으로
-              온전한 형태를 갖추게 하는 것을 목표로 합니다.
+              Currently pursuing undergraduate studies at the Department of Industrial & Management Systems Engineering, Kyung Hee University.
+              Aiming to become a generalist capable of leading projects, I am broadly studying various fields including
+              planning, UX, UI, HCI, development, optimization, artificial intelligence, machine learning,
+              data analysis, technology management, and marketing to become a Full-Stack PM.
             </p>
-            <p className="text-gray-600 leading-relaxed mb-6">
-              프로젝트를 처음부터 끝까지 책임질 수 있는 Full-stack PM이 되기 위해
-              인공지능, 개발, 최적화, 기획, 디자인 등의 역량을 균형 있게 쌓고 있습니다.
-            </p>
-            <p className="text-gray-600 leading-relaxed">
-              경희대학교 산업경영공학과 3학년 재학 중이며,
-              데이터 기반 의사결정과 체계적 연구 방법론을 학습하고 있습니다.
-            </p>
+            <div className="mt-8 space-y-3 text-sm">
+              <div className="flex">
+                <span className="text-gray-400 w-24">Born</span>
+                <span className="text-gray-600">April 11, 2002</span>
+              </div>
+              <div className="flex">
+                <span className="text-gray-400 w-24">University</span>
+                <span className="text-gray-600">Kyung Hee University, South Korea</span>
+              </div>
+              <div className="flex">
+                <span className="text-gray-400 w-24">Major</span>
+                <span className="text-gray-600">Department of Industrial & Management Systems Engineering</span>
+              </div>
+              <div className="flex">
+                <span className="text-gray-400 w-24">Lab</span>
+                <span className="text-gray-600">UXC Lab, Department of Software Convergence</span>
+              </div>
+              <div className="flex">
+                <span className="text-gray-400 w-24">Email</span>
+                <a href="mailto:ahfxh@khu.ac.kr" className="text-gray-600 hover:text-black transition-colors">
+                  ahfxh@khu.ac.kr
+                </a>
+              </div>
+            </div>
           </motion.div>
 
           {/* Right Column - Skills */}
@@ -190,32 +207,35 @@ export default function Home() {
             viewport={{ once: true }}
           >
             <h3 className="text-sm uppercase tracking-widest text-gray-400 mb-6">
-              Skills & Tools
+              Skills & Learning
             </h3>
-            <div className="space-y-3">
-              {skills.map((skill, index) => (
+            <div className="space-y-6">
+              {Object.entries(skills).map(([category, items], categoryIndex) => (
                 <motion.div
-                  key={skill}
-                  initial={{ opacity: 0, x: 20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
+                  key={category}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: categoryIndex * 0.2 }}
                   viewport={{ once: true }}
-                  className="group"
                 >
-                  <motion.div
-                    className="flex items-center justify-between py-2 border-b border-gray-100"
-                    whileHover={{ x: 10 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <span className="text-gray-700">{skill}</span>
-                    <motion.div
-                      className="w-2 h-2 bg-black rounded-full"
-                      initial={{ scale: 0 }}
-                      whileInView={{ scale: 1 }}
-                      transition={{ delay: index * 0.1 + 0.3 }}
-                      viewport={{ once: true }}
-                    />
-                  </motion.div>
+                  <h4 className="text-xs font-medium text-gray-500 mb-3 uppercase tracking-wider">
+                    {category}
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {items.map((skill, index) => (
+                      <motion.span
+                        key={skill}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        whileInView={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: categoryIndex * 0.2 + index * 0.05 }}
+                        viewport={{ once: true }}
+                        whileHover={{ scale: 1.05 }}
+                        className="px-3 py-1.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-md text-sm text-gray-700 transition-all"
+                      >
+                        {skill}
+                      </motion.span>
+                    ))}
+                  </div>
                 </motion.div>
               ))}
             </div>
@@ -233,7 +253,7 @@ export default function Home() {
           viewport={{ once: true }}
         >
           <h2 className="text-4xl lg:text-5xl font-thin mb-8">
-            Let's Connect
+            Let&apos;s Connect
           </h2>
           <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
             <motion.a

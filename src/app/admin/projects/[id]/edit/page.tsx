@@ -1,443 +1,467 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
-import { ArrowLeft, Save, X, Plus, Calendar, Image } from 'lucide-react'
-import Link from 'next/link'
-import toast from 'react-hot-toast'
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { Upload, X, Calendar, Hash } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface PageProps {
   params: Promise<{ id: string }>
 }
 
 export default function EditProjectPage({ params }: PageProps) {
-  const { data: session, status } = useSession()
-  const router = useRouter()
-  const [projectId, setProjectId] = useState<string | null>(null)
+  const router = useRouter();
+  const { data: session } = useSession();
+  const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
+  const [uploadingImage, setUploadingImage] = useState(false);
   
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const [techInput, setTechInput] = useState('')
   const [formData, setFormData] = useState({
     title: '',
     subtitle: '',
     description: '',
     content: '',
-    image: '',
-    thumbnailImage: '',
+    tags: '',
+    imageUrl: '',
+    githubUrl: '',
+    liveUrl: '',
     startDate: '',
     endDate: '',
-    link: '',
-    github: '',
-    tech: [] as string[],
-    featured: false,
-    published: true,
-    order: 0,
-  })
+    displayOrder: 0,
+    isPublished: false,
+    isFeatured: false
+  });
 
   useEffect(() => {
-    // params를 풀어서 ID 가져오기
-    params.then(p => setProjectId(p.id))
-  }, [params])
+    params.then(p => setProjectId(p.id));
+  }, [params]);
 
   useEffect(() => {
-    if (status === 'loading' || !projectId) return
-    if (!session?.user?.isAdmin) {
-      router.push('/')
-      return
+    if (projectId && session?.user?.isAdmin) {
+      fetchProject();
     }
-    fetchProject()
-  }, [session, status, projectId])
+  }, [projectId, session]);
 
   const fetchProject = async () => {
-    if (!projectId) return
+    if (!projectId) return;
+    
     try {
-      const res = await fetch(`/api/admin/projects/${projectId}`)
+      const res = await fetch(`/api/admin/projects/${projectId}`);
       if (res.ok) {
-        const project = await res.json()
+        const project = await res.json();
         setFormData({
           title: project.title || '',
           subtitle: project.subtitle || '',
           description: project.description || '',
           content: project.content || '',
-          image: project.image || '',
-          thumbnailImage: project.thumbnailImage || '',
-          startDate: project.startDate ? project.startDate.split('T')[0] : '',
-          endDate: project.endDate ? project.endDate.split('T')[0] : '',
-          link: project.link || '',
-          github: project.github || '',
-          tech: project.tech ? JSON.parse(project.tech) : [],
-          featured: project.featured || false,
-          published: project.published || true,
-          order: project.order || 0,
-        })
-      } else {
-        toast.error('Project not found')
-        router.push('/admin')
+          tags: project.tags?.join(', ') || '',
+          imageUrl: project.imageUrl || '',
+          githubUrl: project.githubUrl || '',
+          liveUrl: project.liveUrl || '',
+          startDate: project.startDate?.split('T')[0] || '',
+          endDate: project.endDate?.split('T')[0] || '',
+          displayOrder: project.displayOrder || 0,
+          isPublished: project.isPublished || false,
+          isFeatured: project.isFeatured || false
+        });
+        if (project.imageUrl) {
+          setImagePreview(project.imageUrl);
+        }
       }
     } catch (error) {
-      toast.error('Failed to load project')
-      router.push('/admin')
+      console.error('Failed to fetch project:', error);
     } finally {
-      setIsLoading(false)
+      setFetching(false);
     }
-  }
+  };
 
-  if (status === 'loading' || isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-gray-600 border-t-blue-400 rounded-full animate-spin" />
-      </div>
-    )
-  }
-
-  if (!session?.user?.isAdmin) {
-    return null
-  }
-
-  const handleAddTech = () => {
-    if (techInput.trim() && !formData.tech.includes(techInput.trim())) {
-      setFormData(prev => ({
-        ...prev,
-        tech: [...prev.tech, techInput.trim()]
-      }))
-      setTechInput('')
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
-  }
+  };
 
-  const removeTech = (tech: string) => {
-    setFormData(prev => ({
-      ...prev,
-      tech: prev.tech.filter(t => t !== tech)
-    }))
-  }
+  const uploadImage = async (): Promise<string | null> => {
+    if (!imageFile) return null;
+
+    setUploadingImage(true);
+    const formData = new FormData();
+    formData.append('file', imageFile);
+
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        return data.url;
+      }
+    } catch (error) {
+      console.error('Image upload failed:', error);
+    } finally {
+      setUploadingImage(false);
+    }
+
+    return null;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!formData.title || !formData.description) {
-      toast.error('Title and description are required')
-      return
-    }
+    e.preventDefault();
+    setLoading(true);
 
-    setIsSubmitting(true)
-    
     try {
-      const response = await fetch(`/api/admin/projects/${projectId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...formData,
-          tech: JSON.stringify(formData.tech),
-          startDate: formData.startDate ? new Date(formData.startDate).toISOString() : null,
-          endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to update project')
+      let imageUrl = formData.imageUrl;
+      if (imageFile) {
+        const uploadedUrl = await uploadImage();
+        if (uploadedUrl) {
+          imageUrl = uploadedUrl;
+        }
       }
 
-      toast.success('Project updated successfully!')
-      router.push('/portfolio')
+      const res = await fetch(`/api/admin/projects/${projectId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          imageUrl,
+          tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
+        }),
+      });
+
+      if (res.ok) {
+        router.push('/admin');
+      }
     } catch (error) {
-      console.error('Error updating project:', error)
-      toast.error('Failed to update project')
+      console.error('Failed to update project:', error);
     } finally {
-      setIsSubmitting(false)
+      setLoading(false);
     }
+  };
+
+  if (!session?.user?.isAdmin || fetching) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-gray-300 border-t-black rounded-full animate-spin" />
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 py-8">
-      <div className="max-w-4xl mx-auto px-6">
-        {/* Header */}
+    <div className="min-h-screen bg-white pt-24">
+      {/* Main Content */}
+      <main className="max-w-4xl mx-auto px-6 lg:px-12">
         <div className="mb-8">
-          <Link href="/portfolio">
-            <button className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-4">
-              <ArrowLeft size={20} />
-              Back to Portfolio
-            </button>
-          </Link>
-          <h1 className="text-4xl font-bold text-white">Edit Project</h1>
+          <h1 className="text-3xl font-thin mb-2">Edit Project</h1>
+          <p className="text-gray-500">Update project information</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-8">
           {/* Basic Information */}
-          <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
-            <h2 className="text-xl font-semibold text-white mb-4">Basic Information</h2>
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white border border-gray-200 rounded-lg p-8"
+          >
+            <h2 className="text-lg font-medium mb-6">Basic Information</h2>
             
-            <div className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Title *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                    className="w-full px-4 py-2 bg-gray-900/50 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none transition-colors"
-                    placeholder="Project Title"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Subtitle
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.subtitle}
-                    onChange={(e) => setFormData(prev => ({ ...prev, subtitle: e.target.value }))}
-                    className="w-full px-4 py-2 bg-gray-900/50 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none transition-colors"
-                    placeholder="e.g., KHU Valley Program, LG CNS Optimization Grand Challenge"
-                  />
-                </div>
-              </div>
-
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Short Description *
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Title *
                 </label>
                 <input
                   type="text"
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  className="w-full px-4 py-2 bg-gray-900/50 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none transition-colors"
-                  placeholder="Brief description of the project"
                   required
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
+                  placeholder="Project Title"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Subtitle
+                </label>
+                <input
+                  type="text"
+                  value={formData.subtitle}
+                  onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
+                  placeholder="e.g., KHU Valley Program, LG CNS Optimization"
                 />
               </div>
             </div>
-          </div>
 
-          {/* Media & Dates */}
-          <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
-            <h2 className="text-xl font-semibold text-white mb-4">Media & Timeline</h2>
-            
-            <div className="space-y-4">
+            <div className="mt-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Short Description *
+              </label>
+              <textarea
+                required
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all resize-none"
+                rows={3}
+                placeholder="Brief description of the project"
+              />
+            </div>
+
+            <div className="mt-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Detailed Content (Markdown)
+              </label>
+              <textarea
+                value={formData.content}
+                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all font-mono text-sm"
+                rows={12}
+              />
+            </div>
+          </motion.section>
+
+          {/* Media & Timeline */}
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-white border border-gray-200 rounded-lg p-8"
+          >
+            <h2 className="text-lg font-medium mb-6">Media & Timeline</h2>
+
+            {/* Image Upload */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <Upload className="w-4 h-4 inline mr-1" />
+                Thumbnail Image (16:9 ratio recommended)
+              </label>
+              
+              <div className="flex items-start gap-4">
+                <div className="flex-1">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
+                    id="image-upload"
+                  />
+                  <label
+                    htmlFor="image-upload"
+                    className="block w-full px-4 py-2 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                  >
+                    {imageFile ? imageFile.name : 'Click to select image file'}
+                  </label>
+                  
+                  {!imageFile && (
+                    <div className="mt-2">
+                      <input
+                        type="url"
+                        value={formData.imageUrl}
+                        onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
+                        placeholder="Or enter image URL"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {imagePreview && (
+                  <div className="relative w-32 h-20 border border-gray-200 rounded-lg overflow-hidden">
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImageFile(null);
+                        setImagePreview('');
+                        setFormData({ ...formData, imageUrl: '' });
+                      }}
+                      className="absolute top-1 right-1 p-1 bg-white rounded-full shadow-md hover:bg-gray-100"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
+              <p className="mt-2 text-xs text-gray-500">
+                Recommended size: 1920x1080 or 1280x720 pixels for best display
+              </p>
+            </div>
+
+            {/* Dates */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  <Image size={16} className="inline mr-2" />
-                  Thumbnail Image URL (16:9 ratio recommended)
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Calendar className="w-4 h-4 inline mr-1" />
+                  Start Date
+                </label>
+                <input
+                  type="date"
+                  value={formData.startDate}
+                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Calendar className="w-4 h-4 inline mr-1" />
+                  End Date
+                </label>
+                <input
+                  type="date"
+                  value={formData.endDate}
+                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
+                />
+              </div>
+            </div>
+
+            {/* Display Order */}
+            <div className="mt-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Display Order
+              </label>
+              <input
+                type="number"
+                value={formData.displayOrder}
+                onChange={(e) => setFormData({ ...formData, displayOrder: parseInt(e.target.value) || 0 })}
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
+                placeholder="0"
+              />
+              <p className="mt-1 text-xs text-gray-500">Lower numbers appear first</p>
+            </div>
+          </motion.section>
+
+          {/* Links & Tags */}
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-white border border-gray-200 rounded-lg p-8"
+          >
+            <h2 className="text-lg font-medium mb-6">Links & Tags</h2>
+
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  GitHub URL
                 </label>
                 <input
                   type="url"
-                  value={formData.thumbnailImage}
-                  onChange={(e) => setFormData(prev => ({ ...prev, thumbnailImage: e.target.value }))}
-                  className="w-full px-4 py-2 bg-gray-900/50 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none transition-colors"
-                  placeholder="https://example.com/thumbnail.jpg"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Recommended size: 1920x1080 or 1280x720 pixels for best display
-                </p>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    <Calendar size={16} className="inline mr-2" />
-                    Start Date
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.startDate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
-                    className="w-full px-4 py-2 bg-gray-900/50 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none transition-colors"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    <Calendar size={16} className="inline mr-2" />
-                    End Date
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.endDate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
-                    className="w-full px-4 py-2 bg-gray-900/50 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none transition-colors"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Detailed Content (Markdown)
-                </label>
-                <textarea
-                  value={formData.content}
-                  onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-                  rows={8}
-                  className="w-full px-4 py-2 bg-gray-900/50 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none transition-colors resize-none font-mono text-sm"
-                  placeholder="# Project Details&#10;&#10;Detailed description in Markdown format...&#10;&#10;## Features&#10;- Feature 1&#10;- Feature 2&#10;&#10;## Technical Details&#10;..."
+                  value={formData.githubUrl}
+                  onChange={(e) => setFormData({ ...formData, githubUrl: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
+                  placeholder="https://github.com/username/repo"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Display Order
-                </label>
-                <input
-                  type="number"
-                  value={formData.order}
-                  onChange={(e) => setFormData(prev => ({ ...prev, order: parseInt(e.target.value) || 0 }))}
-                  className="w-full px-4 py-2 bg-gray-900/50 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none transition-colors"
-                  placeholder="0"
-                  min="0"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Lower numbers appear first in the portfolio
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Links */}
-          <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
-            <h2 className="text-xl font-semibold text-white mb-4">Links</h2>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Live Demo URL
                 </label>
                 <input
                   type="url"
-                  value={formData.link}
-                  onChange={(e) => setFormData(prev => ({ ...prev, link: e.target.value }))}
-                  className="w-full px-4 py-2 bg-gray-900/50 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none transition-colors"
+                  value={formData.liveUrl}
+                  onChange={(e) => setFormData({ ...formData, liveUrl: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
                   placeholder="https://example.com"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  GitHub Repository
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Hash className="w-4 h-4 inline mr-1" />
+                  Tags (comma separated)
                 </label>
                 <input
-                  type="url"
-                  value={formData.github}
-                  onChange={(e) => setFormData(prev => ({ ...prev, github: e.target.value }))}
-                  className="w-full px-4 py-2 bg-gray-900/50 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none transition-colors"
-                  placeholder="https://github.com/username/repo"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Technologies */}
-          <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
-            <h2 className="text-xl font-semibold text-white mb-4">Technologies</h2>
-            
-            <div>
-              <div className="flex gap-2">
-                <input
                   type="text"
-                  value={techInput}
-                  onChange={(e) => setTechInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      handleAddTech()
-                    }
-                  }}
-                  className="flex-1 px-4 py-2 bg-gray-900/50 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none transition-colors"
-                  placeholder="Add technology (e.g., React, TypeScript)"
+                  value={formData.tags}
+                  onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
+                  placeholder="React, Next.js, TypeScript"
                 />
-                <button
-                  type="button"
-                  onClick={handleAddTech}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white transition-colors flex items-center gap-2"
-                >
-                  <Plus size={18} />
-                  Add
-                </button>
-              </div>
-              
-              <div className="flex flex-wrap gap-2 mt-4">
-                {formData.tech.map((tech) => (
-                  <span
-                    key={tech}
-                    className="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-sm flex items-center gap-2"
-                  >
-                    {tech}
-                    <button
-                      type="button"
-                      onClick={() => removeTech(tech)}
-                      className="hover:text-red-400 transition-colors"
-                    >
-                      <X size={14} />
-                    </button>
-                  </span>
-                ))}
               </div>
             </div>
-          </div>
+          </motion.section>
 
-          {/* Settings */}
-          <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
-            <h2 className="text-xl font-semibold text-white mb-4">Settings</h2>
-            
+          {/* Publishing Options */}
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="bg-white border border-gray-200 rounded-lg p-8"
+          >
+            <h2 className="text-lg font-medium mb-6">Publishing Options</h2>
+
             <div className="space-y-4">
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={formData.featured}
-                  onChange={(e) => setFormData(prev => ({ ...prev, featured: e.target.checked }))}
-                  className="w-5 h-5 rounded border-gray-600 bg-gray-900/50 text-blue-500"
+                  checked={formData.isPublished}
+                  onChange={(e) => setFormData({ ...formData, isPublished: e.target.checked })}
+                  className="w-4 h-4 text-black focus:ring-black border-gray-300 rounded"
                 />
-                <span className="text-gray-300">Mark as Featured Project</span>
+                <span className="text-sm">
+                  Publish immediately
+                  <span className="text-gray-500 ml-2">(visible on portfolio page)</span>
+                </span>
               </label>
 
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={formData.published}
-                  onChange={(e) => setFormData(prev => ({ ...prev, published: e.target.checked }))}
-                  className="w-5 h-5 rounded border-gray-600 bg-gray-900/50 text-blue-500"
+                  checked={formData.isFeatured}
+                  onChange={(e) => setFormData({ ...formData, isFeatured: e.target.checked })}
+                  className="w-4 h-4 text-black focus:ring-black border-gray-300 rounded"
                 />
-                <span className="text-gray-300">Published</span>
+                <span className="text-sm">
+                  Mark as featured
+                  <span className="text-gray-500 ml-2">(highlight on portfolio page)</span>
+                </span>
               </label>
             </div>
-          </div>
+          </motion.section>
 
           {/* Submit Buttons */}
-          <div className="flex justify-end gap-4">
-            <Link href="/portfolio">
-              <button
-                type="button"
-                className="px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-all text-white"
-              >
-                Cancel
-              </button>
-            </Link>
-            
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="flex gap-4 pb-12"
+          >
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="px-6 py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-all text-white flex items-center gap-2"
+              disabled={loading || uploadingImage}
+              className="px-8 py-3 bg-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              {isSubmitting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                <>
-                  <Save size={20} />
-                  Update Project
-                </>
-              )}
+              {loading ? 'Updating...' : 'Update Project'}
             </button>
-          </div>
+            <button
+              type="button"
+              onClick={() => router.push('/admin')}
+              className="px-8 py-3 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-all"
+            >
+              Cancel
+            </button>
+          </motion.div>
         </form>
-      </div>
+      </main>
     </div>
-  )
+  );
 }

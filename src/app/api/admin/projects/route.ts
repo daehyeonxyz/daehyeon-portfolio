@@ -19,12 +19,11 @@ export async function GET() {
       ]
     })
 
-    return NextResponse.json(projects)
+    // Ensure we always return an array
+    return NextResponse.json(projects || [])
   } catch (error) {
     console.error('Error fetching projects:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch projects' },
-      { status: 500 }
-    )
+    // Return empty array on error instead of error object
+    return NextResponse.json([], { status: 200 })
   }
 }
